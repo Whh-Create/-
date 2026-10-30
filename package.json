@@ -1,0 +1,13 @@
+{
+  "name": "weiqi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "围棋在线对弈：9/13/19 路、人机与双人、终局数子、SGF 导出，纯静态零依赖",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "test": "node test/engine.test.js",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "keywords": ["go", "weiqi", "baduk", "board-game", "canvas"],
+  "license": "MIT"
+}

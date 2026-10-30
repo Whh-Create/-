@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#131010" />
+<meta name="description" content="围棋在线对弈：9/13/19 路棋盘、人机与双人对局、提子与打劫规则、终局数子、SGF 导出，纯静态离线可玩。" />
+<title>围棋 · Weiqi — 在线对弈</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131010'/%3E%3Ccircle cx='11' cy='11' r='5.2' fill='%23202020' stroke='%23d8a94b' stroke-width='1.2'/%3E%3Ccircle cx='21' cy='21' r='5.2' fill='%23f4efe3'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<div class="app">
+  <header class="masthead">
+    <div class="brand">
+      <span class="brand__seal" aria-hidden="true">碁</span>
+      <div class="brand__text">
+        <h1>围棋</h1>
+        <p>Weiqi · 落子无悔</p>
+      </div>
+    </div>
+    <div class="masthead__actions">
+      <span class="badge" id="engine-badge">中式规则</span>
+      <button class="ghost-btn" id="btn-help" type="button">规则说明</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="board-column">
+      <div class="board-frame">
+        <canvas id="board" role="img" aria-label="围棋棋盘"></canvas>
+        <span class="board-frame__tag" id="board-tag">19 路</span>
+      </div>
+      <div class="statusbar">
+        <div class="statusbar__turn">
+          <span class="turn-stone is-black" id="turn-stone"></span>
+          <span class="turn-text" id="turn-text">黑棋行棋</span>
+        </div>
+        <div class="statusbar__meta">
+          <span>手数 <b id="meta-move">0</b></span>
+          <span>黑提 <b id="meta-cap-black">0</b></span>
+          <span>白提 <b id="meta-cap-white">0</b></span>
+          <span>贴目 <b id="meta-komi">7.5</b></span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="panel">
+        <h2 class="panel__title">对局设置</h2>
+        <div class="field">
+          <span class="field__label">棋盘</span>
+          <div class="segmented" id="seg-size" role="group" aria-label="棋盘大小">
+            <button type="button" data-size="9" aria-pressed="false">9 路</button>
+            <button type="button" data-size="13" aria-pressed="false">13 路</button>
+            <button type="button" data-size="19" aria-pressed="true">19 路</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field__label">模式</span>
+          <div class="segmented" id="seg-mode" role="group" aria-label="对局模式">
+            <button type="button" data-mode="ai" aria-pressed="true">人机</button>
+            <button type="button" data-mode="pvp" aria-pressed="false">双人</button>
+          </div>
+        </div>
+        <div class="field" id="field-level">
+          <span class="field__label">难度</span>
+          <div class="segmented" id="seg-level" role="group" aria-label="AI 难度">
+            <button type="button" data-level="easy" aria-pressed="false">入门</button>
+            <button type="button" data-level="medium" aria-pressed="true">进阶</button>
+            <button type="button" data-level="hard" aria-pressed="false">高手</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__title">行棋</h2>
+        <div class="actions">
+          <button class="btn btn--primary" data-action="new" type="button">新对局</button>
+          <button class="btn" data-action="undo" type="button">悔棋</button>
+          <button class="btn" data-action="pass" type="button">停一手</button>
+          <button class="btn" data-action="resign" type="button">认输</button>
+          <button class="btn" data-action="estimate" type="button">形势判断</button>
+          <button class="btn" data-action="sgf" type="button">导出 SGF</button>
+          <button class="btn btn--wide" data-action="finish" type="button">终局数子</button>
+        </div>
+        <p class="panel__note" id="hint-line">点击棋盘交点落子，黑棋先行。</p>
+      </section>
+
+      <section class="panel panel--grow">
+        <h2 class="panel__title">棋谱 <span class="panel__hint" id="record-count">0 手</span></h2>
+        <ol class="record" id="record" aria-label="棋谱记录"></ol>
+        <p class="record__empty" id="record-empty">落子后在此显示棋谱。</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span>中式数子规则 · 打劫与禁着点 · 纯静态单页，可离线游玩</span>
+  </footer>
+</div>
+
+<dialog class="dialog" id="dlg-score">
+  <div class="dialog__inner">
+    <h2 class="dialog__title">终局数子</h2>
+    <p class="dialog__desc">双方连续停一手，进入数子。若盘上仍有死子，点击棋子即可标记，胜负会实时更新。</p>
+    <div class="score-table">
+      <div class="score-row">
+        <span class="score-side"><i class="dot dot--black"></i>黑棋</span>
+        <span class="score-value" id="score-black">0</span>
+      </div>
+      <div class="score-row">
+        <span class="score-side"><i class="dot dot--white"></i>白棋</span>
+        <span class="score-value" id="score-white">0</span>
+      </div>
+    </div>
+    <p class="score-detail" id="score-detail"></p>
+    <p class="score-verdict" id="score-verdict">—</p>
+    <div class="dialog__actions">
+      <button class="btn" type="button" id="score-cancel">继续对弈</button>
+      <button class="btn btn--primary" type="button" id="score-confirm">确认终局</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="dialog" id="dlg-help">
+  <div class="dialog__inner">
+    <h2 class="dialog__title">规则说明</h2>
+    <div class="rules">
+      <h3>行棋</h3>
+      <p>黑先白后，轮流将棋子落在交叉点上。棋子落下后不可移动，但可以被提取。</p>
+      <h3>气与提子</h3>
+      <p>紧邻棋子的空交叉点称为「气」。一块棋若失去全部气，即被提取出盘。落子后若对方棋子无气，对方棋子被提走。</p>
+      <h3>禁着点</h3>
+      <p>禁止自杀（落子后己方棋子立即无气），也禁止「打劫」时立即回提还原上一手之前的局面。本局采用简单劫规则。</p>
+      <h3>终局与数子</h3>
+      <p>双方连续停一手即终局，按中式数子法计算：己方棋子数 + 围住的空点数，白棋另加贴目。终局时可点选死子后再确认；也可随时点「终局数子」直接结算。</p>
+      <h3>快捷键</h3>
+      <p><kbd>N</kbd> 新对局 · <kbd>U</kbd> 悔棋 · <kbd>P</kbd> 停一手 · <kbd>E</kbd> 形势判断</p>
+    </div>
+    <div class="dialog__actions">
+      <button class="btn btn--primary" type="button" id="help-close">明白了</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="dialog dialog--compact" id="dlg-confirm">
+  <div class="dialog__inner">
+    <h2 class="dialog__title" id="confirm-title">开始新对局？</h2>
+    <p class="dialog__desc" id="confirm-desc">当前棋谱将被清空。</p>
+    <div class="dialog__actions">
+      <button class="btn" type="button" id="confirm-cancel">取消</button>
+      <button class="btn btn--primary" type="button" id="confirm-ok">确定</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/ai.js"></script>
+<script src="assets/js/board.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
